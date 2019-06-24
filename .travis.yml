@@ -1,0 +1,17 @@
+# everytime we push a change to github, travis will spin up a python server
+language: python
+python:
+  - "3.7"
+
+# it will make docker services available
+services:
+  - docker
+
+# it will use pip to install docker-compose
+before_script: pip install docker-compose
+
+# it will run the build/script, and if the build ends up in a failure, it
+# will send us a notification
+script:
+  - docker-compose run app sh -c "python manage.py test && flake8"
+# make sure I add flake8 (linting tool) to requirements.txt
