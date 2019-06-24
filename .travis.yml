@@ -1,7 +1,7 @@
 # everytime we push a change to github, travis will spin up a python server
 language: python
 python:
-  - "3.7"
+  - "3.6"
 
 # it will make docker services available
 services:
