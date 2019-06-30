@@ -8,9 +8,15 @@ ENV PYTHONUNBUFFERED 1
 
 # copy from
 COPY ./requirements.txt /requirements.txt
+
+RUN apk add --update --no-cache postgresql-client
+
+RUN apk add --update --no-cache --virtual .tmp-build-deps \
+      gcc libc-dev linux-headers postgresql-dev
+
 # this takes the reuirements.txt file that we just created and installs it w/pip
 RUN pip install -r /requirements.txt
-
+RUN apk del .tmp-build-deps
 #creates empty folder called /app
 RUN mkdir /app
 # switches to this /app dir as the default location to start from when opening
