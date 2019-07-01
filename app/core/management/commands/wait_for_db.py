@@ -13,7 +13,7 @@ class Command(BaseCommand):
     # a handle function is what is ran whenever we run this managament Command
     def handle(self, *args, **options):
         '''
-        Check and see if the db is avaible, and once it's available,
+        Check and see if the db is available, and once it's available,
         we are going to clean and exit
         '''
         self.stdout.write('Waiting for database...')
