@@ -26,3 +26,5 @@ class UserAdmin(BaseUserAdmin):
 
 
 admin.site.register(models.User, UserAdmin)
+# using default model for Tag
+admin.site.register(models.Tag)
