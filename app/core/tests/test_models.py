@@ -74,3 +74,13 @@ class ModelTests(TestCase):
         # we create a tag and then convert our tag model into a string, it
         # gives us the name
         self.assertEqual(str(tag), tag.name)
+
+    def test_ingredient_str(self):
+        '''
+        Test the ingredient string representation
+        '''
+        ingredient = models.Ingredient.objects.create(
+            user=sample_user(),
+            name='Jalapeno',
+        )
+        self.assertEqual(str(ingredient), ingredient.name)
