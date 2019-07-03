@@ -89,11 +89,11 @@ class ModelTests(TestCase):
         '''
         Test the recipe string representation
         '''
+        # create sample recipe
         recipe = models.Recipe.objects.create(
             user=sample_user(),
             title='Beef Wellington',
             time_minutes=5,
             price=15.00
         )
-
         self.assertEqual(str(recipe), recipe.title)
