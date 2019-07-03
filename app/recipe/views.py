@@ -36,11 +36,9 @@ class TagIngredientAttrViewSet(viewsets.GenericViewSet,
 
 class TagViewSet(TagIngredientAttrViewSet):
     '''
-    Manage tags in databse
+    Manage tags in database
     '''
-
     queryset = Tag.objects.all()
-    # add serializer class
     serializer_class = serializers.TagSerializer
 
 
