@@ -149,3 +149,85 @@ class PrivateRecipeApiTests(TestCase):
         # now we expect the response to be serialized
         serializer = RecipeDetailSerializer(recipe)
         self.assertEqual(response.data, serializer.data)
+
+    def test_create_basic_recipe(self):
+        '''
+        Test creating recipe for auth'd user
+        '''
+        # create payload with minimum required fields for creating new recipe
+        payload = {
+            'title': 'Lava Cake',
+            'time_minutes': 25,
+            'price': 7.00
+        }
+        # post the payload dictionary to RECIPES_URL
+        response = self.client.post(RECIPES_URL, payload)
+        # standard hjttp repsonse code for creating objects in an api
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # when you create an object using gjango rest framework, the default
+        # behavior is it will return a dictionary containg the created object!
+        # retrieve created recipe from our models
+        recipe = Recipe.objects.get(id=response.data['id'])
+        # loop through each keys and check that the correct value is assigned
+        # to recipe model
+        for key in payload.keys():
+            # getattr is a python helper function that allows you to retrieve
+            # an attribute from an object by passing in a variable.
+            self.assertEqual(payload[key], getattr(recipe, key))
+
+    def test_create_recipe_with_tags(self):
+        '''
+        Test creating recipe with tags
+        '''
+        # create 2 sample tags to test
+        tag1 = sample_tag(user=self.user, name='Mexican')
+        tag2 = sample_tag(user=self.user, name='Appetizer')
+        # now create a recipe and assign the tags to the recipe
+        payload = {
+            'title': 'Avocado Dip',
+            'tags': [tag1.id, tag2.id],
+            'time_minutes': 30,
+            'price': 20.00,
+        }
+        # make http post request
+        response = self.client.post(RECIPES_URL, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # retrieve recipe that was created
+        recipe = Recipe.objects.get(id=response.data['id'])
+        # retieve tags that were created with the recipe
+        # because we have a manytomany field assigned to our tags,
+        # this will return all of the tags that were assigned to our recipe
+        # as a queryset and store them in a tags variable.
+        tags = recipe.tags.all()
+        # assert that our TWO tags were returned
+        self.assertEqual(tags.count(), 2)
+        # now assert that tags we created as our sample tags are the same
+        # that are in our query set.
+        self.assertIn(tag1, tags)
+        self.assertIn(tag2, tags)
+
+    def test_create_recipe_with_ingredients(self):
+        '''
+        Test creating recipe with ingredients
+        '''
+        # create sample ingredients
+        ingredient1 = sample_ingredient(user=self.user, name='Avocado')
+        ingredient2 = sample_ingredient(user=self.user, name='tomato')
+        # now create a recipe and assign the ingredients to the recipe
+        payload = {
+            'title': 'Avocado Dip',
+            'ingredients': [ingredient1.id, ingredient2.id],
+            'time_minutes': 30,
+            'price': 20.00
+        }
+        # make http post request
+        response = self.client.post(RECIPES_URL, payload)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        # retrieve recipe that was created
+        recipe = Recipe.objects.get(id=response.data['id'])
+        # retrieve ingredients that were created with recipe
+        ingredients = recipe.ingredients.all()
+        # assert that our TWO ingredients were returned
+        self.assertEqual(ingredients.count(), 2)
+        self.assertIn(ingredient1, ingredients)
+        self.assertIn(ingredient2, ingredients)

@@ -76,3 +76,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         # if the retrieve call is not called, we will just return the
         # recipe, rather than the recipe DETAIL
         return self.serializer_class
+
+    def perform_create(self, serializer):
+        '''
+        Create a new recipe
+        '''
+        # this is what need to do to make our test pass becuase the model
+        # viewset allows you to create objects out of the box. So the only
+        # thing we need to do is assign the authenticated user to that model
+        # once it has been created
+        serializer.save(user=self.request.user)
