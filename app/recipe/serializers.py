@@ -49,3 +49,13 @@ class RecipeSerializer(serializers.ModelSerializer):
             )
         read_only_fields = ('id',)
         # now define primary key related fields (above)
+
+
+# nest recipe serializer inside of our detail serializer
+class RecipeDetailSerializer(RecipeSerializer):
+    '''
+    Serialize a recipe detail
+    '''
+    # many=True means we can have many ingredients associated with a recipe
+    ingredients = IngredientSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
