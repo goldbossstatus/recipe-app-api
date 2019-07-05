@@ -1,3 +1,9 @@
+# python function that allows you to generate temp files
+import tempfile
+import os
+# pillow requirements importing our image class which will then let us create
+# test images which we can then upload to our API
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -11,7 +17,15 @@ from recipe.serializers import RecipeSerializer, RecipeDetailSerializer
 RECIPES_URL = reverse('recipe:recipe-list')
 
 
-# /api/recipe/recipes/2
+def image_upload_url(recipe_id):
+    '''
+    Return URL for recipe image upload
+    '''
+    # the name we will give our custom URL for our endpoint
+    return reverse('recipe:recipe-upload-image', args=[recipe_id])
+
+
+# /api/recipe/recipes/2 (example)
 def detail_recipe_url(recipe_id):
     '''
     Return recipe detail URL
@@ -294,3 +308,69 @@ class PrivateRecipeApiTests(TestCase):
         # retrieve the tags (which there will be none)
         tags = recipe.tags.all()
         self.assertEqual(len(tags), 0)
+
+
+class RecipeImageUploadTests(TestCase):
+
+    def setUp(self):
+        # create client
+        self.client = APIClient()
+        # create user
+        self.user = get_user_model().objects.create_user(
+            'test@america.com',
+            'testpassword'
+        )
+        # authenticate user
+        self.client.force_authenticate(self.user)
+        # create recipe
+        self.recipe = sample_recipe(user=self.user)
+
+    def tearDown(self):
+        # We want to make sure that our filesystem is kept clean after our
+        # tests, and this means REMOVING all of the test files that we create.
+        self.recipe.image.delete()
+
+    def test_upload_image_to_recipe(self):
+        '''
+        Test uploading an image to recipe
+        '''
+        # create the url using the sample recipe in the setUp
+        url = image_upload_url(self.recipe.id)
+        # creates a names temporary file in the system at a random location,
+        # (usually in the /temp folder)
+        # this creates a temporary file in the system that we can then write
+        # too, and after you exit the context manager, (outside the
+        # with statement) it will automatically remove the file
+        with tempfile.NamedTemporaryFile(suffix='.jpg') as ntf:
+            # creates an image with the Image class that we uploaded from
+            # the PIL Library,   black square that is 10 pixels by 10 pixels
+            image = Image.new('RGB', (10, 10))
+            # save the image to our file, and then write the full map that
+            # you want to save it as.
+            image.save(ntf, format='JPEG')
+            # this is the way the pythton reads files, so we use seek function
+            # to set the pointer back to the beginning of the file, as if we
+            # jst opened it
+            ntf.seek(0)
+            # request with image payload and add the format option to our post
+            # to tell django that we want to make a multipart form request.
+            # A FORM THAT CONSISTS OF DATA. By default it would be a form that
+            # that just consists of a json object, but we want to post data
+            res = self.client.post(url, {'image': ntf}, format='multipart')
+            # now run assertions
+        self.recipe.refresh_from_db()
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        # now check that image from payload is in the response
+        self.assertIn('image', res.data)
+        # check that path exists for image that is saved to model
+        self.assertTrue(os.path.exists(self.recipe.image.path))
+
+    def test_upload_image_bad_request(self):
+        '''
+        Test uploading an invalid image
+        '''
+        # create url
+        url = image_upload_url(self.recipe.id)
+        # create post request with invalid payload
+        res = self.client.post(url, {'image': 'not image'}, format='multipart')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
