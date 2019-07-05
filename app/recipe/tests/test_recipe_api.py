@@ -231,3 +231,66 @@ class PrivateRecipeApiTests(TestCase):
         self.assertEqual(ingredients.count(), 2)
         self.assertIn(ingredient1, ingredients)
         self.assertIn(ingredient2, ingredients)
+
+    def test_partial_updated_recipe(self):
+        '''
+        Test updating a recipe with patch
+        '''
+        # create sample recipe
+        recipe = sample_recipe(user=self.user)
+        # add a tag 1
+        recipe.tags.add(sample_tag(user=self.user))
+        # add a new tag we will replace tag 1 with
+        new_tag = sample_tag(user=self.user, name='Dessert')
+        # create payload with a different title to update old title
+        payload = {
+            'title': 'Fondant Tart',
+            'tags': [new_tag.id]
+        }
+        # create a our recipe from our detail url
+        url = detail_recipe_url(recipe.id)
+        # make http patch request
+        self.client.patch(url, payload)
+        # retrieve and update to the recipe from the database
+        # the details will not change in db unless you call refresh_from_db
+        recipe.refresh_from_db()
+        # assert that the title is equal to the new title, Fondant Tart
+        self.assertEqual(recipe.title, payload['title'])
+        # retrieve all of the tags that are assigned to this recipe
+        tags = recipe.tags.all()
+        # assert that the length of the tags is 1, because we only patched 1
+        self.assertEqual(len(tags), 1)
+        # assert that the new tag is in the tags that we retrieved
+        self.assertIn(new_tag, tags)
+
+    def test_full_update_recipe(self):
+        '''
+        test updating a recipe with put
+        '''
+        # create sample recipe
+        recipe = sample_recipe(user=self.user)
+        # create a tag for the sample recipe
+        recipe.tags.add(sample_tag(user=self.user))
+        # create payload for put update
+        payload = {
+            'title': 'Chiken Pasta Fettuccine',
+            'time_minutes': 35,
+            'price': 45,
+        }
+        # now create the url
+        url = detail_recipe_url(recipe.id)
+        # make http put request
+        self.client.put(url, payload)
+        # make sure that values refesh from the db and values have changed
+        recipe.refresh_from_db()
+        self.assertEqual(recipe.title, payload['title'])
+        # check the minutes have changed
+        self.assertEqual(recipe.time_minutes, payload['time_minutes'])
+        # check the price has change
+        self.assertEqual(recipe.price, payload['price'])
+        # check that the tags assigned are 0 BECAUSE
+        # when we omit a field in a PUT request that clears the value
+        # of that field.
+        # retrieve the tags (which there will be none)
+        tags = recipe.tags.all()
+        self.assertEqual(len(tags), 0)

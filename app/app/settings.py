@@ -122,10 +122,16 @@ USE_L10N = True
 USE_TZ = True
 
 
+
+MEDIA_URL = '/media/'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
-
 STATIC_URL = '/static/'
+# tells django where to store all of the media files in the vol/web/media
+# dir that we create as a part of our build process in our docker container
+MEDIA_ROOT = '/vol/web/media'
+# this is where all of the static files will be dumped when the project builds
+STATIC_ROOT = '/vol/web/static'
 
 # we are setting core is the name of our app, and User is the name of a model in
 # our app that we want to assign as our custom user model
