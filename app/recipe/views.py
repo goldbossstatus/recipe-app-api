@@ -61,11 +61,46 @@ class RecipeViewSet(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
 
+    def _params_to_ints(self, qs):
+        '''
+        Convert a list of string ID's to a list of integers
+        '''
+        # qs is the comma separated list of ID's, in the form of a string which
+        # we will convert to a python list of integer types
+        return [int(str_id) for str_id in qs.split(',')]
+
     def get_queryset(self):
         '''
-        Retrieve the recipes for the authenticate user
+        Retrieve the recipes for the authenticated user
         '''
-        return self.queryset.filter(user=self.request.user)
+        # retrieve the get parameters for the tags. The request object has a
+        # variable called query_params, which will be a dictionary containing
+        # all of the query_params that are provided in the requests.
+        tags = self.request.query_params.get('tags')
+        ingredients = self.request.query_params.get('ingredients')
+        # assign the queryset. The reason we do this is because we dont want to
+        # be reassigning our queryset with the filtered options, we want to
+        # reference it by the new queryset variable, apply the filters, and
+        # return it, instead of our MAIN queryset
+        queryset = self.queryset
+        # apply the _params_to_ints function that was created above to return
+        # a list of individual id's
+        if tags:
+            tag_ids = self._params_to_ints(tags)
+            # now filter the queryset
+            # this is the django syntax for filtering on foreign key objects.
+            # We have a tags field in our Recipe queryset, and that has a
+            # foreign key to the tags table which has an id. So if you want to
+            # filter by that id on the remote table then we do TWO UNDERSCORES,
+            # and then we do another TWO UNDERSCORES and we apply a function
+            # called in which says return all of the tags where the id is
+            # in the list that we provide.
+            queryset = queryset.filter(tags__id__in=tag_ids)
+        # now do the same thing with the ingredients
+        if ingredients:
+            ingredients_ids = self._params_to_ints(ingredients)
+            queryset = queryset.filter(ingredients__id__in=ingredients_ids)
+        return queryset.filter(user=self.request.user)
 
     def get_serializer_class(self):
         '''

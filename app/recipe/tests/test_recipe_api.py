@@ -374,3 +374,70 @@ class RecipeImageUploadTests(TestCase):
         # create post request with invalid payload
         res = self.client.post(url, {'image': 'not image'}, format='multipart')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_filter_recipes_by_tags(self):
+        '''
+        Test returning recipes with specific tags
+        '''
+        # create three recipes, two of them will have tags assigned, and one
+        # of them will not have the tag assigned.
+        # make the request with the filter parameters for the tags and ensure
+        # that the results returned match the ones with the tags and exclude
+        # the one without the tags
+        recipe1 = sample_recipe(user=self.user, title='Chicken Lime Soup')
+        recipe2 = sample_recipe(user=self.user, title='Salmon with lemon')
+        tag1 = sample_tag(user=self.user, name='soup')
+        tag2 = sample_tag(user=self.user, name='fish')
+        recipe1.tags.add(tag1)
+        recipe2.tags.add(tag2)
+
+        recipe3 = sample_recipe(user=self.user, title='Tenderloin')
+
+        # so now make request for soup and fish options in our database
+        response = self.client.get(
+            RECIPES_URL,
+            # pass get parameters to a get request using the test client by
+            # just passing in a dictionary of the values you wish to add as
+            # get parameters.
+            # the way the filter feature is being desined is that if you want
+            # to filter by tags,  you simply pass a get parameter wiht a comma
+            # separated list of the tags ids you wish to filter by
+            {'tags': f'{tag1.id},{tag2.id}'}
+        )
+        # serialize the recipes, and see if they exist in the responses return
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+
+        self.assertIn(serializer1.data, response.data)
+        self.assertIn(serializer2.data, response.data)
+        self.assertNotIn(serializer3.data, response.data)
+
+    def test_filter_recipes_by_ingredient(self):
+        '''
+        Test returning recipes with specific ingredients
+        '''
+        # create sample recipes
+        recipe1 = sample_recipe(user=self.user, title='French Dip')
+        recipe2 = sample_recipe(user=self.user, title='Mac n cheese Bake')
+        # create sample ingredients
+        ingredient1 = sample_ingredient(user=self.user, name='Au Jus')
+        ingredient2 = sample_ingredient(user=self.user, name='Sharp Cheddar')
+        # add ingredients to recipe
+        recipe1.ingredients.add(ingredient1)
+        recipe2.ingredients.add(ingredient2)
+        # now make recipe without any ingredients added to it
+        recipe3 = sample_recipe(user=self.user, title='Chicken Parmesean')
+
+        response = self.client.get(
+            RECIPES_URL,
+            {'ingredients': f'{ingredient1.id},{ingredient2.id}'},
+        )
+        # serialize the objects
+        serializer1 = RecipeSerializer(recipe1)
+        serializer2 = RecipeSerializer(recipe2)
+        serializer3 = RecipeSerializer(recipe3)
+        # make assertions
+        self.assertIn(serializer1.data, response.data)
+        self.assertIn(serializer2.data, response.data)
+        self.assertNotIn(serializer3.data, response.data)
