@@ -7,7 +7,9 @@ from django.conf import settings
 
 
 def recipe_image_filepath(instance, filename):
-    '''generate file path for new recipe image'''
+    '''
+    generate file path for new recipe image
+    '''
     # strip the extention part of the filename (everything after last dot)
     # slice the list and return the last item, so this will return the
     # extension of the file name

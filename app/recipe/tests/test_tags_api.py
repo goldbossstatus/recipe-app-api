@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from core.models import Tag
+from core.models import Tag, Recipe
 from recipe.serializers import TagSerializer
 
 
@@ -118,3 +118,64 @@ class PrivateTagsApiTests(TestCase):
         payload = {'name': ''}
         response = self.client.post(TAGS_URLS, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_tags_assigned_to_recipes(self):
+        '''
+        Test filtering tags by those assigned to recipes
+        '''
+        # create two tags, assign one of those tags to a recipe, leave the
+        # other tag unassigned, and make http get call with the assigned_only
+        # filter, and then make sure only the tag assigned to a recipe
+        # gets returned
+        tag1 = Tag.objects.create(user=self.user, name='Breakfast')
+        tag2 = Tag.objects.create(user=self.user, name='Lunch')
+        recipe = Recipe.objects.create(
+            title='Huevos Rancheros',
+            time_minutes=8,
+            price=10,
+            user=self.user,
+        )
+        recipe.tags.add(tag1)
+        # we are calling our filter assigned_only, and pass in a 1, which will
+        # be evaluated by the prgraam as True, and it will filter by the tags
+        # that are assigned only
+        response = self.client.get(TAGS_URLS, {'assigned_only': 1})
+        # create a serailizer so we can verify if they are in the response
+        serializer1 = TagSerializer(tag1)
+        serializer2 = TagSerializer(tag2)
+        # make sure the serializer for breakfast tag is included in response
+        self.assertIn(serializer1.data, response.data)
+        # make sure lunch tag not return becasue it is not assigned to a recipe
+        self.assertNotIn(serializer2.data, response.data)
+
+    def test_retrtieve_tags_assigned_unique(self):
+        '''
+        Test filtering tags assigned unique items, this applies to a tag
+        potentially being in multiple recipes, we want to make sure we return
+        UNIQUE items, so one response per tag/recipe relation
+        '''
+        # create
+        tag1 = Tag.objects.create(user=self.user, name='Breakfast')
+        Tag.objects.create(user=self.user, name='Dinner')
+        # create two recipes
+        recipe1 = Recipe.objects.create(
+            title='French Toast',
+            time_minutes=15,
+            price=10,
+            user=self.user
+        )
+        # assign first tag to recipe
+        recipe1.tags.add(tag1)
+        # create second recipe
+        recipe2 = Recipe.objects.create(
+            title=' Second Breakfast',
+            time_minutes=5,
+            price=3,
+            user=self.user,
+        )
+        # assign recipe 2 to tag 1 as well
+        recipe2.tags.add(tag1)
+        # make call to retrieve tags ONLY assigned to a recipe
+        response = self.client.get(TAGS_URLS, {'assigned_only': 1})
+        # make sure to return only ONE tag object (BREAKFAST)
+        self.assertEqual(len(response.data), 1)

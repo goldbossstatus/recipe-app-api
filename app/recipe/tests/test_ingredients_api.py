@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
-from core.models import Ingredient
+from core.models import Ingredient, Recipe
 from recipe.serializers import IngredientSerializer
 
 
@@ -83,7 +83,7 @@ class PrivateIngredientsApiTests(TestCase):
         '''
         Test create a new Ingredient
         '''
-        payload = {'name': 'Romain Lettus'}
+        payload = {'name': 'Romain Lettuce'}
         self.client.post(INGREDIENTS_URL, payload)
 
         exists = Ingredient.objects.filter(
@@ -101,3 +101,71 @@ class PrivateIngredientsApiTests(TestCase):
         }
         response = self.client.post(INGREDIENTS_URL, payload)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_retrieve_ingredients_assigned_to_recipes(self):
+        '''
+        Test filtering ingredients by those assigned to recipes
+        '''
+        # create two ingredients, leave ingredient2 unassigned
+        ingredient1 = Ingredient.objects.create(
+            user=self.user,
+            name='Peach'
+        )
+        ingredient2 = Ingredient.objects.create(
+            user=self.user,
+            name='Butter'
+        )
+        # create a recipe
+        recipe1 = Recipe.objects.create(
+            title='Peach Cobbler',
+            time_minutes=15,
+            price=7,
+            user=self.user,
+        )
+        # assign ingredient1 to the recipe1
+        recipe1.ingredients.add(ingredient1)
+        # make hhtp call
+        response = self.client.get(INGREDIENTS_URL, {'assigned_only': 1})
+        # serialize ingredients
+        serializer1 = IngredientSerializer(ingredient1)
+        serializer2 = IngredientSerializer(ingredient2)
+        # make sure we get back only ingredient assigned to recipe
+        self.assertIn(serializer1.data, response.data)
+        self.assertNotIn(serializer2.data, response.data)
+
+    def test_retrieve_ingredients_assigned_unique(self):
+        '''
+        Test filtering ingredients by assigned returns unique items
+        '''
+        # create an ingredient that will be assigned
+        ingredient1 = Ingredient.objects.create(
+            user=self.user,
+            name='Tea'
+        )
+        # create ingredient object that will not get assigned
+        Ingredient.objects.create(
+            user=self.user,
+            name='Elevensies'
+        )
+        # create a recipe
+        recipe1 = Recipe.objects.create(
+            title='Afternoon Tea',
+            time_minutes=5,
+            price=2,
+            user=self.user,
+        )
+        # assign ingredient1 to recipe 1
+        recipe1.ingredients.add(ingredient1)
+        # create a second recipe
+        recipe2 = Recipe.objects.create(
+            title='Luncheon',
+            time_minutes=30,
+            price=15,
+            user=self.user,
+        )
+        # assign ingredient1 to recipe 2
+        recipe2.ingredients.add(ingredient1)
+        # make http call
+        response = self.client.get(INGREDIENTS_URL, {'assigned_only': 1})
+        # make sure we only get 1 ingredient object returned
+        self.assertEqual(len(response.data), 1)

@@ -24,10 +24,24 @@ class TagIngredientAttrViewSet(viewsets.GenericViewSet,
         '''
         return objects for the current authenticated user ONLY
         '''
+        assigned_only = bool(
+            # the default, if assigned_only is not passed in AT ALL, will
+            # return 0, then converted into an integer 0, and then converted
+            # into a false (0) bool
+            int(self.request.query_params.get('assigned_only', 0))
+        )
+        queryset = self.queryset
+        # if assigned_only is true, then apply a filter where only tags and
+        # ingredients that are assigned to recipes will be returned
+        if assigned_only:
+            queryset = queryset.filter(recipe__isnull=False)
         # the request object should be passed into the 'self' as a class
-        # variable, and the user should be assigned to that, becuase authent'n
+        # variable, and the user should be assigned to that, because authent'n
         # is required.
-        return self.queryset.filter(user=self.request.user).order_by('-name')
+        return queryset.filter(
+            user=self.request.user
+            # add distinct() to make sure queryset returned is UNIQUE
+        ).order_by('-name').distinct()
 
     def perform_create(self, serializer):
         '''
